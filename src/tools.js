@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { remember, recall } from "./memory.js";
 import { resolve } from "node:path";
 
 export const tools = [
@@ -36,6 +37,25 @@ export const tools = [
       required: ["path"],
     },
   },
+
+  {
+    name: "save_memory",
+    description: "Persist a durable fact or rule for future sessions. Save conclusions and constraints, not process. One fact per call.",
+    input_schema: {
+      type: "object",
+      properties: { text: { type: "string", description: "the fact to remember" } },
+      required: ["text"],
+    },
+  },
+  {
+    name: "search_memory",
+    description: "Search long-term memory with space-separated keywords. Use when the task may depend on rules or facts from earlier sessions. Returns top 3 matching notes.",
+    input_schema: {
+      type: "object",
+      properties: { query: { type: "string", description: "keywords, separated by spaces" } },
+      required: ["query"],
+    },
+  },
 ];
 
 const toolByName = Object.fromEntries(tools.map(t => [t.name, t]));
@@ -67,6 +87,13 @@ export function runTool(name, input) {
     if (name === "write_file") {
       writeFileSync(input.path, input.content, "utf-8");
       return { content: `wrote ${input.content.length} bytes to ${resolve(input.path)}` };
+    }
+    if (name === "save_memory") {
+      return { content: remember(input.text) };
+    }
+    if (name === "search_memory") {
+      const hits = recall(input.query);
+      return { content: hits.length ? hits.join("\n\n---\n\n") : "no matching notes" };
     }
     if (name === "list_dir") {
       const entries = readdirSync(input.path).map(name => {

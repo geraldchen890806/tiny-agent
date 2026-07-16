@@ -1,9 +1,11 @@
 const COMPRESS_THRESHOLD_TOKENS = 12000;
 const KEEP_RECENT_TURNS = 4;
 
+import { recentNotes } from "./memory.js";
+
 export class Context {
-  constructor(systemPrompt, client, model) {
-    this.system = systemPrompt;
+  constructor(baseSystem, client, model) {
+    this.baseSystem = baseSystem;
     this.messages = [];
     this.client = client;
     this.model = model;
@@ -66,7 +68,12 @@ export class Context {
     return {
       model: this.model,
       max_tokens: 1024,
-      system: [{ type: "text", text: this.system, cache_control: { type: "ephemeral" } }],
+      // Two blocks: the stable persona+brief up front (cached), volatile memory behind
+      // it (uncached) — the moving block never invalidates the cached prefix (blog 02).
+      system: [
+        { type: "text", text: this.baseSystem, cache_control: { type: "ephemeral" } },
+        { type: "text", text: `## Recent memory\n${recentNotes()}` },
+      ],
       tools,
       messages: this.messages,
     };
