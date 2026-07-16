@@ -58,9 +58,9 @@ export const tools = [
   },
 ];
 
-const toolByName = Object.fromEntries(tools.map(t => [t.name, t]));
+export const toolByName = Object.fromEntries(tools.map(t => [t.name, t]));
 
-function validateInput(schema, input) {
+export function validateInput(schema, input) {
   const errors = [];
   for (const key of schema.required ?? []) {
     if (!(key in input)) errors.push(`missing required field: ${key}`);

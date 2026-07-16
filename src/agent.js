@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { Context } from "./context.js";
-import { tools, runTool } from "./tools.js";
+import { tools, runTool, validateInput, toolByName } from "./tools.js";
+import { gate } from "./gate.js";
 import { PROMPT_V1, PROMPT_V2 } from "./prompts.js";
 import { verify } from "./verifier.js";
 
@@ -59,15 +60,23 @@ async function main(task) {
       continue;
     }
     if (res.stop_reason === "tool_use") {
-      const toolResults = res.content.filter(b => b.type === "tool_use").map(b => {
-        const result = runTool(b.name, b.input);
-        return {
+      const toolResults = [];
+      for (const b of res.content.filter(b => b.type === "tool_use")) {
+        // Data layer first: an ill-formed call has no business entering the "should this
+        // happen" debate, and consequence() must never read unvalidated input (blog 07).
+        const spec = toolByName[b.name];
+        const errors = spec ? validateInput(spec.input_schema, b.input) : [];
+        const verdict = errors.length
+          ? { ok: false, reason: `input validation failed: ${errors.join("; ")}` }
+          : await gate(b.name, b.input);
+        const result = verdict.ok ? runTool(b.name, b.input) : { error: verdict.reason };
+        toolResults.push({
           type: "tool_result",
           tool_use_id: b.id,
           content: result.error ?? result.content,
           is_error: !!result.error,
-        };
-      });
+        });
+      }
       ctx.addToolResults(toolResults);
     }
   }
