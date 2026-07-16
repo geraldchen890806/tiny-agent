@@ -1,6 +1,6 @@
 {
   "name": "tiny-agent",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A minimal AI agent that grows from 30 lines to v1.0, companion to the fe2agent blog series",
   "type": "module",
   "main": "src/agent.js",
