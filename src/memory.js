@@ -1,19 +1,27 @@
 import { readFileSync, appendFileSync, existsSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 
-const NOTES_PATH = "memory/notes.md";
+// Memory follows the same baseDir as the file tools: during evals it must land in the
+// scratch workspace, not in the real repo — otherwise cases leak into each other and
+// eval junk crowds the agent's actual long-term notes.
+let baseDir = ".";
+export function setMemoryBaseDir(dir) { baseDir = dir ?? "."; }
+const memDir = () => resolve(baseDir, "memory");
+const memFile = () => resolve(memDir(), "notes.md");
+
 const RECENT_N = 5;
 const TOP_K = 3;
 
 export function remember(text) {
-  mkdirSync("memory", { recursive: true });
+  mkdirSync(memDir(), { recursive: true });
   const entry = `\n## ${new Date().toISOString().slice(0, 10)}\n${text.trim()}\n`;
-  appendFileSync(NOTES_PATH, entry, "utf-8");
+  appendFileSync(memFile(), entry, "utf-8");
   return `remembered (${text.trim().length} chars)`;
 }
 
 function loadEntries() {
-  if (!existsSync(NOTES_PATH)) return [];
-  return readFileSync(NOTES_PATH, "utf-8").split(/\n(?=## )/).map(s => s.trim()).filter(Boolean);
+  if (!existsSync(memFile())) return [];
+  return readFileSync(memFile(), "utf-8").split(/\n(?=## )/).map(s => s.trim()).filter(Boolean);
 }
 
 export function recall(query) {

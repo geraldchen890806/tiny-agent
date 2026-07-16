@@ -1,7 +1,14 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
-import { remember, recall } from "./memory.js";
+import { remember, recall, setMemoryBaseDir } from "./memory.js";
 import { spawnSubagent } from "./subagent.js";
 import { resolve } from "node:path";
+
+// Evals run each case in a scratch workspace. runAgent passes its cwd option down here
+// instead of process.chdir — a chdir would make the eval loop's own relative paths
+// (rmSync("workspace")) drift between runs (blog 09).
+let baseDir = ".";
+export function setBaseDir(dir) { baseDir = dir ?? "."; setMemoryBaseDir(dir); }
+const rp = p => resolve(baseDir, p);
 
 export const tools = [
   {
@@ -95,11 +102,11 @@ export async function runTool(name, input) {
 
   try {
     if (name === "read_file") {
-      return { content: readFileSync(input.path, "utf-8") };
+      return { content: readFileSync(rp(input.path), "utf-8") };
     }
     if (name === "write_file") {
-      writeFileSync(input.path, input.content, "utf-8");
-      return { content: `wrote ${input.content.length} bytes to ${resolve(input.path)}` };
+      writeFileSync(rp(input.path), input.content, "utf-8");
+      return { content: `wrote ${input.content.length} bytes to ${rp(input.path)}` };
     }
     if (name === "save_memory") {
       return { content: remember(input.text) };
@@ -112,8 +119,8 @@ export async function runTool(name, input) {
       return { content: hits.length ? hits.join("\n\n---\n\n") : "no matching notes" };
     }
     if (name === "list_dir") {
-      const entries = readdirSync(input.path).map(name => {
-        const full = resolve(input.path, name);
+      const entries = readdirSync(rp(input.path)).map(name => {
+        const full = resolve(rp(input.path), name);
         const s = statSync(full);
         return { name, type: s.isDirectory() ? "dir" : "file", size: s.size };
       });

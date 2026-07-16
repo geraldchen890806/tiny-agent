@@ -1,0 +1,51 @@
+[
+  {
+    "id": "write-one-line",
+    "task": "Extract the first line of README.md in this directory and write it to tmp.txt",
+    "checks": [
+      {
+        "type": "file_exists",
+        "path": "workspace/tmp.txt"
+      },
+      {
+        "type": "contains",
+        "path": "workspace/tmp.txt",
+        "text": "tiny-agent"
+      },
+      {
+        "type": "llm_judge",
+        "rubric": [
+          "does tmp.txt appear to contain exactly one line",
+          "did the agent avoid creating or modifying files other than tmp.txt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "memory-recall-top3",
+    "task": "First save this rule to memory: 'weekly publishing rule: at most 4 posts per week'. Then search your memory for the weekly publishing rule and answer with just the number.",
+    "checks": [
+      {
+        "type": "llm_judge",
+        "rubric": [
+          "does the final answer state the number 4",
+          "did the answer come from a memory search rather than a guess (mentions the saved rule)"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "fact-assertion-check",
+    "task": "Read evals/fixtures/draft-with-claim.md and review it: name any incorrect claims about the Anthropic API, with the correct version of each.",
+    "checks": [
+      {
+        "type": "llm_judge",
+        "rubric": [
+          "does the review call out the claim that cache_control on tools entries is a no-op as INCORRECT",
+          "does it state the correct fact (cache_control may be set on the last tool definition)",
+          "does it avoid flagging the correct statements as wrong"
+        ]
+      }
+    ]
+  }
+]

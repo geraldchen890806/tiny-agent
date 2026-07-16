@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { Context } from "./context.js";
 import { tools, runTool, validateInput, toolByName } from "./tools.js";
+import { setBaseDir } from "./tools.js";
 import { gate } from "./gate.js";
 import { PROMPT_V1, PROMPT_V2 } from "./prompts.js";
 import { verify } from "./verifier.js";
@@ -28,10 +29,11 @@ export async function withRetry(fn, { retries = 3, baseMs = 1000 } = {}) {
 
 const promptArg = process.argv.find(a => a.startsWith("--prompt="));
 const version = promptArg?.split("=")[1] ?? "v2";
-const task = process.argv.slice(2).find(a => !a.startsWith("--"));
-const ctx = new Context(version === "v1" ? PROMPT_V1 : PROMPT_V2, client, MODEL);
+const cliTask = process.argv.slice(2).find(a => !a.startsWith("--"));
 
-async function main(task) {
+export async function runAgent(task, { cwd } = {}) {
+  setBaseDir(cwd);
+  const ctx = new Context(version === "v1" ? PROMPT_V1 : PROMPT_V2, client, MODEL);
   ctx.addUser(task);
   let steps = 0;
   let verifyRounds = 0;
@@ -83,11 +85,10 @@ async function main(task) {
   console.error(`[abort · hit MAX_STEPS=${MAX_STEPS}]`);
 }
 
-// subagent.js imports withRetry from this module, so importing it must be
-// side-effect-free: only run the loop when this file is the entry point.
+// Thin CLI shell: only run the loop when invoked directly (evals import runAgent).
 import { pathToFileURL } from "node:url";
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main(task ?? "hi, who are you?").then(out => {
+  runAgent(cliTask ?? "hi, who are you?").then(out => {
     if (out != null) console.log(out);
   });
 }
