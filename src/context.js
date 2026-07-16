@@ -1,6 +1,7 @@
 const COMPRESS_THRESHOLD_TOKENS = 12000;
 const KEEP_RECENT_TURNS = 4;
 
+import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { recentNotes } from "./memory.js";
 
 export class Context {
@@ -28,7 +29,7 @@ export class Context {
     this.totalTokens = usage.input_tokens + usage.output_tokens;
   }
 
-  async maybeCompress() {
+  async maybeCompress(trace) {
     if (this.totalTokens < COMPRESS_THRESHOLD_TOKENS) return false;
     if (this.messages.length <= KEEP_RECENT_TURNS * 2) return false;
 
@@ -44,12 +45,15 @@ export class Context {
     const toCompress = this.messages.slice(0, cut);
     const recent = this.messages.slice(cut);
 
-    const summaryRes = await this.client.messages.create({
+    // The summary mini-call burns real tokens too. Long tasks compress the most, so a
+    // breaker that skips this line is at its least accurate exactly when needed (blog 10).
+    const create = () => this.client.messages.create({
       model: this.model,
       max_tokens: 512,
       system: "Summarize this conversation history into one paragraph. Keep tool calls, file paths, and any facts the next turn might need. No preamble.",
       messages: [{ role: "user", content: JSON.stringify(toCompress) }],
     });
+    const summaryRes = trace ? await trace.span("llm", { kind: "compress" }, create) : await create();
     const summary = summaryRes.content.find(b => b.type === "text")?.text ?? "";
 
     this.messages = [
@@ -62,6 +66,21 @@ export class Context {
       ...recent,
     ];
     return true;
+  }
+
+  checkpoint() {
+    mkdirSync("checkpoints", { recursive: true });
+    const file = `checkpoints/task-${Date.now()}.json`;
+    writeFileSync(file, JSON.stringify({ messages: this.messages }, null, 2), "utf-8");
+    return file;
+  }
+
+  restore(file) {
+    this.messages = JSON.parse(readFileSync(file, "utf-8")).messages;
+    // A checkpoint usually means the conversation was already big. Seed the counter at
+    // the threshold so the very first resumed turn re-evaluates compression instead of
+    // waiting for one full-price round trip to relearn the size.
+    this.totalTokens = COMPRESS_THRESHOLD_TOKENS;
   }
 
   toRequest(tools) {

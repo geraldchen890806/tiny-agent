@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { runTool } from "./tools.js";
 import { withRetry } from "./agent.js";
+import { activeTrace } from "./trace.js";
 
 // tools.js and this file import each other (delegate_task -> spawnSubagent -> runTool).
 // ESM tolerates the cycle as long as neither module calls the other at top level —
@@ -25,6 +26,7 @@ export async function spawnSubagent(brief, tools, { maxSteps = 10 } = {}) {
 
     if (res.stop_reason === "end_turn") {
       console.error(`[subagent · steps=${steps} in=${inTok} out=${outTok}]`);
+      activeTrace()?.recordExternal(inTok, outTok); // the fleet's bill, not just the driver's (blog 10)
       return res.content.find(b => b.type === "text")?.text ?? "";
     }
     if (res.stop_reason === "tool_use") {
@@ -40,5 +42,6 @@ export async function spawnSubagent(brief, tools, { maxSteps = 10 } = {}) {
     }
   }
   console.error(`[subagent · steps=${steps} in=${inTok} out=${outTok}]`);
+  activeTrace()?.recordExternal(inTok, outTok);
   return `[subagent aborted: hit maxSteps=${maxSteps}]`;
 }
