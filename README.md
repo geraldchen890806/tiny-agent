@@ -8,7 +8,7 @@
 |---|---|---|
 | `v0.1` | 01 Agent Loop | 30 行裸循环：while + Anthropic API + 1 个工具（读文件） |
 | `v0.2` | 02 Context | 历史管理 + 简易上下文压缩 + prompt caching |
-| `v0.3` | 03 Tools | 工具箱扩到 3 个 + 入参 schema 校验 |
+| `v0.3` | 03 Tools | 工具箱扩到 3 个 (read/write/list) + 手写 input schema 校验 + is_error 反馈 |
 | `v0.4` | 04 Prompt | system prompt 重写（前后行为对比） |
 | `v0.5` | 05 记忆 | markdown 记忆文件 + 朴素检索 |
 | `v0.6` | 06 容错 | 重试/退避 + verifier 自检 |
