@@ -1,18 +1,17 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync } from "node:fs";
 import { Context } from "./context.js";
 import { tools, runTool } from "./tools.js";
+import { PROMPT_V1, PROMPT_V2 } from "./prompts.js";
 
 const client = new Anthropic();
 const MODEL = "claude-opus-4-7";
-const PERSONA = "You are tiny-agent, a minimal AI agent that uses tools when helpful. Be concise.";
-// The project brief rides along in the system prompt: standing project context for the
-// agent, and enough stable prefix to clear the Opus-tier 4096-token minimum cacheable
-// length — a shorter prefix silently never caches (see blog 02).
-const SYSTEM = PERSONA + "\n\n" + readFileSync(new URL("../PROJECT.md", import.meta.url), "utf-8");
+
+const promptArg = process.argv.find(a => a.startsWith("--prompt="));
+const version = promptArg?.split("=")[1] ?? "v2";
+const task = process.argv.slice(2).find(a => !a.startsWith("--"));
+const ctx = new Context(version === "v1" ? PROMPT_V1 : PROMPT_V2, client, MODEL);
 
 async function main(userInput) {
-  const ctx = new Context(SYSTEM, client, MODEL);
   ctx.addUser(userInput);
 
   while (true) {
@@ -43,4 +42,4 @@ async function main(userInput) {
   }
 }
 
-main(process.argv[2] ?? "hi, who are you?");
+main(task ?? "hi, who are you?");

@@ -1,13 +1,19 @@
 {
   "name": "tiny-agent",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "A minimal AI agent that grows from 30 lines to v1.0, companion to the fe2agent blog series",
   "type": "module",
   "main": "src/agent.js",
   "scripts": {
     "start": "node src/agent.js"
   },
-  "keywords": ["ai-agent", "claude", "anthropic", "tutorial", "frontend"],
+  "keywords": [
+    "ai-agent",
+    "claude",
+    "anthropic",
+    "tutorial",
+    "frontend"
+  ],
   "author": "Gerald Chen <geraldchen890806@gmail.com>",
   "license": "MIT",
   "dependencies": {
