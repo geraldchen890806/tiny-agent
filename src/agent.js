@@ -69,7 +69,7 @@ async function main(task) {
         const verdict = errors.length
           ? { ok: false, reason: `input validation failed: ${errors.join("; ")}` }
           : await gate(b.name, b.input);
-        const result = verdict.ok ? runTool(b.name, b.input) : { error: verdict.reason };
+        const result = verdict.ok ? await runTool(b.name, b.input) : { error: verdict.reason };
         toolResults.push({
           type: "tool_result",
           tool_use_id: b.id,
@@ -83,6 +83,11 @@ async function main(task) {
   console.error(`[abort · hit MAX_STEPS=${MAX_STEPS}]`);
 }
 
-main(task ?? "hi, who are you?").then(out => {
-  if (out != null) console.log(out);
-});
+// subagent.js imports withRetry from this module, so importing it must be
+// side-effect-free: only run the loop when this file is the entry point.
+import { pathToFileURL } from "node:url";
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main(task ?? "hi, who are you?").then(out => {
+    if (out != null) console.log(out);
+  });
+}

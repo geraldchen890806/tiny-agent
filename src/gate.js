@@ -10,6 +10,8 @@ const LEVELS = {
   search_memory: "allow",   // v0.5 retrieval, read-only, pass
   write_file: "confirm",
   save_memory: "confirm",   // v0.5 memory write, hits disk, through the gate
+  delegate_task: "allow",   // v0.8 delegation is a choice, not a side effect — and the
+                            // child toolbox is read-only, so nothing to confirm here
 };
 
 function audit(entry) {

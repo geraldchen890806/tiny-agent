@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { remember, recall } from "./memory.js";
+import { spawnSubagent } from "./subagent.js";
 import { resolve } from "node:path";
 
 export const tools = [
@@ -56,6 +57,18 @@ export const tools = [
       required: ["query"],
     },
   },
+
+  {
+    name: "delegate_task",
+    description: "Delegate a self-contained subtask to a fresh subagent. It sees ONLY your brief—no conversation history. Write the brief in three parts: task, constraints, expected output format.",
+    input_schema: {
+      type: "object",
+      properties: {
+        brief: { type: "string", description: "Complete instructions. The subagent knows nothing you don't write here." },
+      },
+      required: ["brief"],
+    },
+  },
 ];
 
 export const toolByName = Object.fromEntries(tools.map(t => [t.name, t]));
@@ -73,7 +86,7 @@ export function validateInput(schema, input) {
   return errors;
 }
 
-export function runTool(name, input) {
+export async function runTool(name, input) {
   const spec = toolByName[name];
   if (!spec) return { error: `unknown tool: ${name}` };
 
@@ -90,6 +103,9 @@ export function runTool(name, input) {
     }
     if (name === "save_memory") {
       return { content: remember(input.text) };
+    }
+    if (name === "delegate_task") {
+      return { content: await spawnSubagent(input.brief, tools) };
     }
     if (name === "search_memory") {
       const hits = recall(input.query);
